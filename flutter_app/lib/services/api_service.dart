@@ -6,7 +6,7 @@ class ApiService {
   // Change this to your PC's local IP when testing on a real device
   // static const String baseUrl = 'http://10.0.2.2:5000/api'; //--> this for local
   // static const String baseUrl = 'http://192.168.29.167:5000/api'; //-->this for 
-static const String baseUrl = 'https://thumbnail-ai-backend.onrender.com/api'; //-->aftre deploy
+static const String baseUrl = 'https://thumbnail-ai-backend-30i1.onrender.com/api'; //-->aftre deploy
 
 Future<Map<String, dynamic>> generateThumbnail({
     required String prompt,
