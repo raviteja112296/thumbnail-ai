@@ -423,7 +423,7 @@ def _generate_background(design: dict) -> Image.Image | None:
     }
 
     print(f"[BG] Generating: {full_prompt[:120]}...")
-    response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=150)
+    response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=240)
 
     if response.status_code == 200:
         img = Image.open(io.BytesIO(response.content)).convert("RGBA")
