@@ -9,7 +9,8 @@ import '../services/firestore_service.dart';
 import 'result_screen.dart';
 
 class GenerateScreen extends StatefulWidget {
-  const GenerateScreen({super.key});
+  final String? initialPrompt;   // ← add this
+  const GenerateScreen({super.key, this.initialPrompt});
   @override
   State<GenerateScreen> createState() => _GenerateScreenState();
 }
@@ -38,7 +39,14 @@ class _GenerateScreenState extends State<GenerateScreen> {
   ];
 
   // ── Image pickers ──────────────────────────────────────────
-
+@override
+void initState() {
+  super.initState();
+  // Pre-fill prompt if coming from history
+  if (widget.initialPrompt != null) {
+    _promptCtrl.text = widget.initialPrompt!;
+  }
+}
   Future<void> _pickFaceImage() async {
     final picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -113,11 +121,13 @@ class _GenerateScreenState extends State<GenerateScreen> {
     if (result['success']) {
       final data = result['data'];
       final description = data['description'] as String;
+      final imageBase64 = data['image_base64'] as String?;
 
       await _firestore.saveGeneration(
         userId: userId,
         prompt: _promptCtrl.text.trim(),
         description: description,
+        imageBase64: imageBase64,
       );
 
       Navigator.push(context, MaterialPageRoute(

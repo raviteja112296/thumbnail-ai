@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/screens/history_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'generate_screen.dart';
@@ -43,7 +44,9 @@ class HomeScreen extends StatelessWidget {
               subtitle: 'View past generated thumbnails',
               icon: Icons.history,
               color: const Color(0xFF00BFA5),
-              onTap: () {},
+              onTap: () => Navigator.push(
+  context,
+  MaterialPageRoute(builder: (_) => const HistoryScreen())),
             ),
           ],
         ),
