@@ -386,52 +386,67 @@ User prompt: {prompt}"""
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _generate_background(design: dict) -> Image.Image | None:
+    """
+    On cloud (Render free) — generate background using Pillow only.
+    No external API call — instant, no timeout risk.
+    """
     style = design.get('style', 'education')
-    bg_prompt = design.get('bg_prompt', '')
-    neg_prompt = design.get('negative_bg_prompt', 'people, faces, text, watermark, blurry')
+    accent = _hex_to_rgb(design.get('accent_color', '#6C63FF'))
 
-    style_boosters = {
-        "tech":      "dark futuristic tech environment, glowing blue circuits, holographic displays, ",
-        "education": "clean modern study desk, warm professional lighting, books and stationery, ",
-        "gaming":    "epic gaming setup, RGB neon lighting, multiple monitors, dark room, ",
-        "nature":    "lush vibrant nature, golden hour light, soft bokeh, serene, ",
-        "business":  "sleek modern office, floor-to-ceiling glass, city skyline view, ",
-        "dramatic":  "cinematic moody scene, dramatic shadows, god rays, atmospheric fog, ",
-        "fitness":   "modern gym interior, equipment, motivational lighting, energetic, ",
-        "cooking":   "beautiful kitchen setup, ingredients, warm lighting, professional, ",
-        "travel":    "stunning travel destination, golden hour, vibrant colors, wide angle, ",
-        "finance":   "financial trading desk, multiple screens, charts, professional, ",
+    # Style-based gradient color pairs
+    style_colors = {
+        "tech":      ((10, 10, 40),    (20, 60, 120)),
+        "education": ((10, 20, 60),    (20, 80, 160)),
+        "gaming":    ((20, 5, 40),     (80, 20, 120)),
+        "dramatic":  ((10, 5, 5),      (60, 10, 10)),
+        "nature":    ((10, 30, 20),    (20, 80, 50)),
+        "business":  ((15, 15, 30),    (30, 40, 80)),
+        "fitness":   ((40, 15, 5),     (120, 50, 10)),
+        "cooking":   ((30, 20, 5),     (100, 60, 10)),
+        "travel":    ((5, 20, 40),     (10, 60, 100)),
+        "finance":   ((20, 20, 5),     (80, 70, 10)),
     }
 
-    booster = style_boosters.get(style, "professional clean background, ")
-    full_prompt = (
-        booster + bg_prompt +
-        ", ultra high quality, 8k, photorealistic, cinematic lighting, "
-        "professional photography, no people, no faces, no text"
+    c1, c2 = style_colors.get(style, ((10, 10, 30), (30, 30, 80)))
+
+    img = Image.new("RGB", (THUMB_W, THUMB_H), c1)
+    draw = ImageDraw.Draw(img)
+
+    # Draw vertical gradient
+    for y in range(THUMB_H):
+        t = y / THUMB_H
+        r = int(c1[0] + (c2[0] - c1[0]) * t)
+        g = int(c1[1] + (c2[1] - c1[1]) * t)
+        b = int(c1[2] + (c2[2] - c1[2]) * t)
+        draw.line([(0, y), (THUMB_W, y)], fill=(r, g, b))
+
+    # Add subtle geometric shapes for depth
+    ar, ag, ab = accent
+
+    # Large circle top right
+    draw.ellipse(
+        [THUMB_W - 400, -200, THUMB_W + 100, 300],
+        fill=(min(ar+20, 255), min(ag+20, 255), min(ab+20, 255))
     )
 
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    payload = {
-        "inputs": full_prompt,
-        "parameters": {
-            "width": THUMB_W,
-            "height": THUMB_H,
-            "num_inference_steps": 20,
-            "guidance_scale": 8.0,
-            "negative_prompt": neg_prompt + ", cartoon, anime, painting, ugly, deformed"
-        }
-    }
+    # Medium circle bottom left
+    draw.ellipse(
+        [-100, THUMB_H - 200, 300, THUMB_H + 100],
+        fill=(min(ar+10, 255), min(ag+10, 255), min(ab+10, 255))
+    )
 
-    print(f"[BG] Generating: {full_prompt[:120]}...")
-    response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=240)
+    # Subtle horizontal lines for texture
+    for y in range(0, THUMB_H, 40):
+        alpha_color = (
+            min(ar + 15, 255),
+            min(ag + 15, 255),
+            min(ab + 15, 255)
+        )
+        draw.line([(0, y), (THUMB_W, y)],
+                  fill=alpha_color, width=1)
 
-    if response.status_code == 200:
-        img = Image.open(io.BytesIO(response.content)).convert("RGBA")
-        print("[BG] Background generated successfully")
-        return img
-    else:
-        print(f"[BG] HF error {response.status_code}: {response.text[:200]}")
-        return None
+    print(f"[BG] Generated Pillow background — style={style}")
+    return img.convert("RGBA")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
