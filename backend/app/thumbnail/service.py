@@ -416,7 +416,7 @@ def _generate_background(design: dict) -> Image.Image | None:
         "parameters": {
             "width": THUMB_W,
             "height": THUMB_H,
-            "num_inference_steps": 30,
+            "num_inference_steps": 20,
             "guidance_scale": 8.0,
             "negative_prompt": neg_prompt + ", cartoon, anime, painting, ugly, deformed"
         }
@@ -439,27 +439,79 @@ def _generate_background(design: dict) -> Image.Image | None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _remove_bg(image_file) -> Image.Image | None:
+    """
+    Try rembg first. If it crashes (out of memory on free hosting),
+    fall back to a lightweight edge-based crop.
+    """
     try:
         from rembg import remove
         image_file.seek(0)
         img_bytes = image_file.read()
 
-        # Pre-process: upscale small images for better cutout quality
-        pil = Image.open(io.BytesIO(img_bytes))
-        if pil.width < 400:
-            pil = pil.resize((pil.width * 2, pil.height * 2), Image.LANCZOS)
-            buf = io.BytesIO()
-            pil.save(buf, format='PNG')
-            img_bytes = buf.getvalue()
+        # Check available memory before running rembg
+        import psutil
+        available_mb = psutil.virtual_memory().available / 1024 / 1024
+        print(f"[FACE] Available memory: {available_mb:.0f}MB")
+
+        if available_mb < 400:
+            print("[FACE] Low memory — skipping rembg, using fallback")
+            return _remove_bg_fallback(image_file)
 
         result_bytes = remove(img_bytes)
         result = Image.open(io.BytesIO(result_bytes)).convert("RGBA")
-        print(f"[FACE] Background removed: {result.size}")
+        print(f"[FACE] rembg success: {result.size}")
         return result
-    except Exception as e:
-        print(f"[FACE] rembg failed: {e}")
-        return None
 
+    except Exception as e:
+        print(f"[FACE] rembg failed: {e} — using fallback")
+        image_file.seek(0)
+        return _remove_bg_fallback(image_file)
+
+
+def _remove_bg_fallback(image_file) -> Image.Image | None:
+    """
+    Lightweight fallback — no AI needed.
+    Crops person from center-bottom of image.
+    Works well for portrait/selfie photos.
+    """
+    try:
+        image_file.seek(0)
+        img = Image.open(io.BytesIO(image_file.read())).convert("RGBA")
+
+        w, h = img.size
+
+        # Crop to portrait ratio focusing on person
+        # Take center 70% width, full height
+        left   = int(w * 0.15)
+        right  = int(w * 0.85)
+        top    = 0
+        bottom = h
+        img = img.crop((left, top, right, bottom))
+
+        # Create soft edge transparency on left and right sides
+        # So person blends into background naturally
+        data = img.load()
+        w2, h2 = img.size
+        fade_width = int(w2 * 0.08)  # 8% fade on each side
+
+        for y in range(h2):
+            for x in range(fade_width):
+                # Left fade
+                alpha = int(255 * (x / fade_width))
+                r, g, b, a = data[x, y]
+                data[x, y] = (r, g, b, min(a, alpha))
+
+                # Right fade
+                rx = w2 - 1 - x
+                r, g, b, a = data[rx, y]
+                data[rx, y] = (r, g, b, min(a, alpha))
+
+        print(f"[FACE] Fallback crop success: {img.size}")
+        return img
+
+    except Exception as e:
+        print(f"[FACE] Fallback also failed: {e}")
+        return None
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HELPERS
