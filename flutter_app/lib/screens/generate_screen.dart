@@ -28,6 +28,7 @@ class _GenerateScreenState extends State<GenerateScreen> {
   Timer? _loadingTimer;
 
   final List<String> _loadingMessages = [
+    'Connecting to server...',
     'Analysing your images...',
     'Generating background with AI...',
     'Removing background from your photo...',

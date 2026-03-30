@@ -5,7 +5,8 @@ import 'dart:convert';
 class ApiService {
   // Change this to your PC's local IP when testing on a real device
   // static const String baseUrl = 'http://10.0.2.2:5000/api'; //--> this for local
-  static const String baseUrl = 'http://192.168.29.167:5000/api';
+  // static const String baseUrl = 'http://192.168.29.167:5000/api'; //-->this for 
+static const String baseUrl = 'https://thumbnail-ai-backend.onrender.com/api'; //-->aftre deploy
 
 Future<Map<String, dynamic>> generateThumbnail({
     required String prompt,
@@ -24,7 +25,7 @@ Future<Map<String, dynamic>> generateThumbnail({
 
     try {
       // ↓ increased from 60s to 180s
-      final response = await request.send().timeout(const Duration(seconds: 180));
+      final response = await request.send().timeout(const Duration(seconds: 300));
       final body = await response.stream.bytesToString();
       final data = jsonDecode(body);
 
