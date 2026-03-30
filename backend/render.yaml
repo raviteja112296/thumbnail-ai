@@ -1,0 +1,19 @@
+New-Item -Path "backend\render.yaml" -ItemType File
+Set-Content -Path "backend\render.yaml" -Value @"
+services:
+  - type: web
+    name: thumbnail-ai-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HF_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+"@

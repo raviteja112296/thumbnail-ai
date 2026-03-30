@@ -1,0 +1,2 @@
+New-Item -Path "backend\Procfile" -ItemType File
+Set-Content -Path "backend\Procfile" -Value "web: gunicorn run:app"
